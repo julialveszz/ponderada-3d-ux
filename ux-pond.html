@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema solar interativo 3D</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>Sistema solar interativo</h3>
+        <p>🖱️ mova o mouse pra rotacionar a câmera</p>
+        <p>🖱️ clique o mouse para dar impulso nas órbitas</p>
+    </div>
+
+    <script>
+        let planetas = [];
+        let estrelas = [];
+        let tempo = 0;
+        let multiplicadorVelocidade = 1;
+        let anguloCamera = 0;
+        let anguloCameraY = 0;
+        
+        function setup() {
+            createCanvas(windowWidth, windowHeight, WEBGL);
+            
+            // criar estrelas de fundo
+            for (let i = 0; i < 300; i++) {
+                estrelas.push({
+                    x: random(-1000, 1000),
+                    y: random(-1000, 1000),
+                    z: random(-1000, 1000),
+                    tamanho: random(1, 3),
+                    brilho: random(0.7, 1)
+                });
+            }
+            
+            // dados dos planetas do sistema solar
+            planetas = [
+                // sol
+                { nome: "sol", distancia: 0, tamanho: 30, velocidade: 0, cor: [255, 220, 0], angulo: 0, ehSol: true },
+                // planetas
+                { nome: "mercúrio", distancia: 60, tamanho: 4, velocidade: 0.04, cor: [169, 169, 169], angulo: 0 },
+                { nome: "vênus", distancia: 80, tamanho: 6, velocidade: 0.035, cor: [255, 198, 73], angulo: 0 },
+                { nome: "terra", distancia: 100, tamanho: 7, velocidade: 0.03, cor: [100, 149, 237], angulo: 0 },
+                { nome: "marte", distancia: 130, tamanho: 5, velocidade: 0.024, cor: [205, 92, 92], angulo: 0 },
+                { nome: "júpiter", distancia: 180, tamanho: 20, velocidade: 0.013, cor: [255, 165, 0], angulo: 0 },
+                { nome: "saturno", distancia: 220, tamanho: 16, velocidade: 0.009, cor: [238, 203, 173], angulo: 0, temAneis: true },
+                { nome: "urano", distancia: 260, tamanho: 12, velocidade: 0.007, cor: [64, 224, 208], angulo: 0 },
+                { nome: "netuno", distancia: 300, tamanho: 11, velocidade: 0.005, cor: [65, 105, 225], angulo: 0 }
+            ];
+        }
+        
+        function draw() {
+            background(10, 10, 20);
+            
+            // controles de câmera com mouse
+            anguloCameraY = map(mouseX, 0, width, -PI, PI);
+            anguloCamera = map(mouseY, 0, height, -PI/3, PI/3);
+            
+            rotateX(anguloCamera);
+            rotateY(anguloCameraY);
+            
+            // usando iluminação
+            ambientLight(60, 60, 80);
+            
+            // luz do sol central
+            pointLight(255, 255, 200, 0, 0, 0);
+            directionalLight(100, 100, 120, -1, 0.5, -1);
+            ambientLight(40, 40, 60);
+            
+            // desenhar estrelas de fundo
+            for (let estrela of estrelas) {
+                push();
+                translate(estrela.x, estrela.y, estrela.z);
+                ambientMaterial(255 * estrela.brilho, 255 * estrela.brilho, 200 * estrela.brilho);
+                noStroke();
+                sphere(estrela.tamanho);
+                pop();
+            }
+            
+            // desenhar órbitas
+            stroke(80, 80, 120, 100);
+            strokeWeight(1);
+            noFill();
+            for (let i = 1; i < planetas.length; i++) {
+                push();
+                rotateX(PI/2);
+                circle(0, 0, planetas[i].distancia * 2);
+                pop();
+            }
+            
+            // desenhar planetas
+            for (let i = 0; i < planetas.length; i++) {
+                let planeta = planetas[i];
+                
+                push();
+                
+                if (planeta.ehSol) {
+                    // sol no centro
+                    ambientMaterial(planeta.cor[0], planeta.cor[1], planeta.cor[2]);
+                    emissiveMaterial(planeta.cor[0] * 0.3, planeta.cor[1] * 0.3, planeta.cor[2] * 0.3);
+                    
+                    // rotação do sol
+                    rotateY(tempo * 0.5);
+                    
+                    noStroke();
+                    sphere(planeta.tamanho);
+                } else {
+                    // calcular posição orbital
+                    let x = cos(planeta.angulo) * planeta.distancia;
+                    let z = sin(planeta.angulo) * planeta.distancia;
+                    let y = sin(planeta.angulo * 0.1) * 5;
+                    
+                    translate(x, y, z);
+                    
+                    // material do planeta
+                    ambientMaterial(planeta.cor[0], planeta.cor[1], planeta.cor[2]);
+                    specularMaterial(planeta.cor[0] * 0.3, planeta.cor[1] * 0.3, planeta.cor[2] * 0.3);
+                    shininess(20);
+                    
+                    // rotação própria
+                    rotateY(tempo * 2);
+                    noStroke();
+                    sphere(planeta.tamanho);
+                    
+                    // anéis de saturno
+                    if (planeta.temAneis) {
+                        push();
+                        rotateX(PI/2);
+                        stroke(200, 180, 150, 150);
+                        strokeWeight(2);
+                        noFill();
+                        for (let r = planeta.tamanho + 5; r < planeta.tamanho + 15; r += 3) {
+                            circle(0, 0, r * 2);
+                        }
+                        pop();
+                    }
+                    // lua da terra
+                    if (planeta.nome === "terra") {
+                        push();
+                        rotateY(tempo * 8);
+                        translate(15, 0, 0);
+                        ambientMaterial(200, 200, 200);
+                        specularMaterial(100, 100, 100);
+                        sphere(2);
+                        pop();
+                    }
+                }
+                
+                pop();
+                
+                // atualizar ângulo orbital
+                if (!planeta.ehSol) {
+                    planeta.angulo += planeta.velocidade * multiplicadorVelocidade;
+                }
+            }
+            
+            // cinturão de asteroides entre marte e júpiter
+            push();
+            for (let i = 0; i < 100; i++) {
+                let angulo = (i / 100) * TWO_PI + tempo * 0.1;
+                let raio = 155 + random(-10, 10);
+                let x = cos(angulo) * raio;
+                let z = sin(angulo) * raio;
+                let y = random(-5, 5);
+                
+                push();
+                translate(x, y, z);
+                ambientMaterial(139, 139, 139);
+                sphere(random(0.5, 1.5));
+                pop();
+            }
+            pop(); 
+            
+            // lógica das partículas
+            for (let i = 0; i < 30; i++) {
+                let angulo = tempo * 0.02 + i * 0.2;
+                let raio = 400 + sin(tempo * 0.01 + i) * 50;
+                
+                let x = cos(angulo) * raio;
+                let z = sin(angulo) * raio;
+                let y = sin(tempo * 0.03 + i) * 30;
+                
+                push();
+                translate(x, y, z);
+                ambientMaterial(255, 255, 255, 150);
+                sphere(0.5);
+                pop();
+            }
+            
+            // atualizar tempo
+            tempo += 0.02 * multiplicadorVelocidade;
+            
+            // diminuir multiplicador 
+            multiplicadorVelocidade = lerp(multiplicadorVelocidade, 1, 0.03);
+        }
+        
+        function mousePressed() {
+            // dar impulso inicial nas órbitas
+            multiplicadorVelocidade = 4;
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
